@@ -89,3 +89,10 @@ Epoch:[1/2](8600/11040) loss:2.025 lr:0.000385059210 epoch_Time:7.0min:
 Epoch:[1/2](8700/11040) loss:2.215 lr:0.000381705871 epoch_Time:7.0min:
 Epoch:[1/2](8800/11040) loss:1.942 lr:0.000378335992 epoch_Time:7.0min:
 Epoch:[1/2](8900/11040) loss:3.122 lr:0.000374950254 epoch_Time:6.0min:
+Epoch:[1/2](9000/11040) loss:2.147 lr:0.000371549344 epoch_Time:6.0min:
+Epoch:[1/2](9100/11040) loss:1.860 lr:0.000368133949 epoch_Time:6.0min:
+Epoch:[1/2](9200/11040) loss:2.114 lr:0.000364704761 epoch_Time:5.0min:
+Epoch:[1/2](9300/11040) loss:1.930 lr:0.000361262475 epoch_Time:5.0min:
+Epoch:[1/2](9400/11040) loss:1.912 lr:0.000357807786 epoch_Time:5.0min:
+Epoch:[1/2](9500/11040) loss:1.834 lr:0.000354341395 epoch_Time:5.0min:
+Epoch:[1/2](9600/11040) loss:2.394 lr:0.000350864003 epoch_Time:4.0min:
