@@ -97,11 +97,11 @@ def train_epoch(epoch):
 
 
 def init_model(model_config: VLMConfig):
-    tokenizer = AutoTokenizer.from_pretrained('/root/minimind-v/model/minimind_tokenizer')
+    tokenizer = AutoTokenizer.from_pretrained(model_config.tokenizer_path)
     moe_path = '_moe' if model_config.use_moe else ''
     # 加载纯语言模型权重
     # ckp = f'./out/lm_{model_config.dim}{moe_path}.pth'
-    ckp = f'/root/train_res/pretrain_512.pth'
+    ckp = f'/root/workspace/train_res/rlhf_512.pth'
     model = MiniMindVLM(model_config)
     state_dict = torch.load(ckp, map_location=args.device)
     model.load_state_dict(state_dict, strict=False)
@@ -141,13 +141,13 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="VLM Pretrain")
     parser.add_argument("--out_dir", type=str, default="out")
     parser.add_argument("--epochs", type=int, default=4)
-    parser.add_argument("--batch_size", type=int, default=16)
-    parser.add_argument("--learning_rate", type=float, default=4e-4)
+    parser.add_argument("--batch_size", type=int, default=64)
+    parser.add_argument("--learning_rate", type=float, default=8e-4)
     parser.add_argument("--device", type=str, default="cuda:0" if torch.cuda.is_available() else "cpu")
     parser.add_argument("--dtype", type=str, default="bfloat16")
     parser.add_argument("--num_workers", type=int, default=8)
-    parser.add_argument("--data_path", type=str, default="/root/pretrain_vlm_data.jsonl")
-    parser.add_argument("--images_path", type=str, default="/root/pretrain_images")
+    parser.add_argument("--data_path", type=str, default="/root/workspace/dataset/pretrain_vlm_data.jsonl")
+    parser.add_argument("--images_path", type=str, default="/root/workspace/dataset/pretrain_images")
     parser.add_argument("--ddp", action="store_true")
     parser.add_argument("--accumulation_steps", type=int, default=1)
     parser.add_argument("--grad_clip", type=float, default=1.0)
@@ -164,7 +164,7 @@ if __name__ == "__main__":
     model_config = VLMConfig(dim=args.dim, n_layers=args.n_layers, max_seq_len=args.max_seq_len)
     max_seq_len = model_config.max_seq_len
     # args.save_dir = os.path.join(args.out_dir)
-    args.save_dir = f'/root/train_res'
+    args.save_dir = f'/root/workspace/train_res'
     os.makedirs(args.save_dir, exist_ok=True)
     os.makedirs(args.out_dir, exist_ok=True)
     tokens_per_iter = args.batch_size * max_seq_len

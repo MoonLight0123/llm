@@ -109,7 +109,7 @@ def init_model(lm_config):
     tokenizer = AutoTokenizer.from_pretrained(lm_config.tokenizer_path)
     model = MiniMindLM(lm_config)
     moe_path = '_moe' if lm_config.use_moe else ''
-    ckp = f'/root/train_res/rlhf_{lm_config.dim}{moe_path}.pth'
+    ckp = f'/root/workspace/train_res/rlhf_{lm_config.dim}{moe_path}.pth'
     state_dict = torch.load(ckp, map_location=args.device)
     model.load_state_dict(state_dict, strict=False)
     Logger(f'LLM总参数量：{sum(p.numel() for p in model.parameters() if p.requires_grad) / 1e6:.3f} 百万')
@@ -149,12 +149,12 @@ if __name__ == "__main__":
     parser.add_argument('--n_layers', default=8, type=int)
     parser.add_argument('--max_seq_len', default=1024, type=int)
     parser.add_argument('--use_moe', default=False, type=bool)
-    parser.add_argument("--data_path", type=str, default="/root/r1_mix_1024.jsonl")
+    parser.add_argument("--data_path", type=str, default="/root/workspace/dataset/r1_mix_1024.jsonl")
 
     args = parser.parse_args()
 
     lm_config = LMConfig(dim=args.dim, n_layers=args.n_layers, max_seq_len=args.max_seq_len, use_moe=args.use_moe)
-    args.save_dir = '/root/train_res'
+    args.save_dir = '/root/workspace/train_res'
     os.makedirs(args.save_dir, exist_ok=True)
     os.makedirs(args.out_dir, exist_ok=True)
     tokens_per_iter = args.batch_size * lm_config.max_seq_len

@@ -4,6 +4,7 @@ import argparse
 import time
 import math
 import warnings
+import json
 
 import pandas as pd
 import torch
@@ -14,19 +15,19 @@ from contextlib import nullcontext
 from torch import optim, nn
 from torch.nn.parallel import DistributedDataParallel
 from torch.utils.data import DataLoader, DistributedSampler
-from transformers import AutoTokenizer, AutoModelForCausalLM
-from model.model import MiniMindLM
-from model.LMConfig import LMConfig
-from model.dataset import SFTDataset
+from transformers import AutoTokenizer, AutoModel
+from model.model_vlm import MiniMindVLM
+from model.VLMConfig import VLMConfig
+from model.dataset import *
 
 warnings.filterwarnings('ignore')
 
 
 def Logger(content):
     if not ddp or dist.get_rank() == 0:
-        print(content)
         with open('output.txt', 'a', encoding='utf-8') as file:
             print(content, file=file)
+        print(content)
 
 
 def get_lr(current_step, total_steps, lr):
@@ -36,16 +37,17 @@ def get_lr(current_step, total_steps, lr):
 def train_epoch(epoch):
     loss_fct = nn.CrossEntropyLoss(reduction='none')
     start_time = time.time()
-    for step, (X, Y, loss_mask) in enumerate(train_loader):
+    for step, (X, Y, loss_mask, pixel_tensors) in enumerate(train_loader):
         X = X.to(args.device)
         Y = Y.to(args.device)
         loss_mask = loss_mask.to(args.device)
+        pixel_tensors = pixel_tensors.to(args.device)
         lr = get_lr(epoch * iter_per_epoch + step, args.epochs * iter_per_epoch, args.learning_rate)
         for param_group in optimizer.param_groups:
             param_group['lr'] = lr
 
         with ctx:
-            res = model(X)
+            res = model(X, pixel_tensors=pixel_tensors)
             loss = loss_fct(
                 res.logits.view(-1, res.logits.size(-1)),
                 Y.view(-1)
@@ -69,7 +71,7 @@ def train_epoch(epoch):
         if step % args.log_interval == 0:
             spend_time = time.time() - start_time
             Logger(
-                'Epoch:[{}/{}]({}/{}) loss:{:.3f} lr:{:.12f} epoch_Time:{}min:'.format(
+                'Epoch:[{}/{}]({}/{}) loss:{:.12f} lr:{:.12f} epoch_Time:{}min:'.format(
                     epoch + 1,
                     args.epochs,
                     step,
@@ -81,28 +83,33 @@ def train_epoch(epoch):
 
         if (step + 1) % args.save_interval == 0 and (not ddp or dist.get_rank() == 0):
             model.eval()
-            moe_path = '_moe' if lm_config.use_moe else ''
-            ckp = f'{args.save_dir}/full_sft_{lm_config.dim}{moe_path}.pth'
-
+            moe_path = '_moe' if model_config.use_moe else ''
+            ckp = f'{args.save_dir}/sft_vlm_{model_config.dim}{moe_path}.pth'
             if isinstance(model, torch.nn.parallel.DistributedDataParallel):
                 state_dict = model.module.state_dict()
             else:
                 state_dict = model.state_dict()
-
-            torch.save(state_dict, ckp)
+            clean_state_dict = {
+                key: value for key, value in state_dict.items() if not key.startswith('vision_encoder.')
+            }
+            torch.save(clean_state_dict, ckp)
             model.train()
 
 
-def init_model(lm_config):
-    tokenizer = AutoTokenizer.from_pretrained(lm_config.tokenizer_path)
-    model = MiniMindLM(lm_config)
-    moe_path = '_moe' if lm_config.use_moe else ''
-    ckp = f'/root/workspace/train_res/pretrain_{lm_config.dim}{moe_path}.pth'
+def init_model(model_config: VLMConfig):
+    tokenizer = AutoTokenizer.from_pretrained(model_config.tokenizer_path)
+    moe_path = '_moe' if model_config.use_moe else ''
+    ckp = f'/root/workspace/train_res/pretrain_vlm_{model_config.dim}{moe_path}.pth'
+
+    model = MiniMindVLM(model_config)
     state_dict = torch.load(ckp, map_location=args.device)
     model.load_state_dict(state_dict, strict=False)
-    Logger(f'LLM总参数量：{sum(p.numel() for p in model.parameters() if p.requires_grad) / 1e6:.3f} 百万')
     model = model.to(args.device)
-    return model, tokenizer
+
+    Logger(f'VLM可训练参数量：{sum(p.numel() for p in model.parameters() if p.requires_grad) / 1e6:.3f} 百万')
+
+    _, preprocess = MiniMindVLM.get_vision_model()
+    return model.to(args.device), tokenizer, preprocess
 
 
 def init_distributed_mode():
@@ -118,37 +125,38 @@ def init_distributed_mode():
 
 
 if __name__ == "__main__":
-    parser = argparse.ArgumentParser(description="Full SFT")
+    parser = argparse.ArgumentParser(description=" VLM SFT")
     parser.add_argument("--out_dir", type=str, default="out")
-    parser.add_argument("--epochs", type=int, default=1)
+    parser.add_argument("--epochs", type=int, default=6)
     parser.add_argument("--batch_size", type=int, default=64)
-    parser.add_argument("--learning_rate", type=float, default=5e-5)
+    parser.add_argument("--learning_rate", type=float, default=6e-6)
     parser.add_argument("--device", type=str, default="cuda:0" if torch.cuda.is_available() else "cpu")
     parser.add_argument("--dtype", type=str, default="bfloat16")
-    parser.add_argument("--num_workers", type=int, default=1)
+    parser.add_argument("--num_workers", type=int, default=8)
+    parser.add_argument("--data_path", type=str, default="/root/workspace/dataset/sft_vlm_data.jsonl")
+    parser.add_argument("--images_path", type=str, default="/root/workspace/dataset/sft_images")
     parser.add_argument("--ddp", action="store_true")
     parser.add_argument("--accumulation_steps", type=int, default=1)
     parser.add_argument("--grad_clip", type=float, default=1.0)
     parser.add_argument("--warmup_iters", type=int, default=0)
-    parser.add_argument("--log_interval", type=int, default=100)
-    parser.add_argument("--save_interval", type=int, default=100)
+    parser.add_argument("--log_interval", type=int, default=50)
+    parser.add_argument("--save_interval", type=int, default=10)
     parser.add_argument('--local_rank', type=int, default=-1)
     parser.add_argument('--dim', default=512, type=int)
     parser.add_argument('--n_layers', default=8, type=int)
-    parser.add_argument('--max_seq_len', default=512, type=int)
+    parser.add_argument('--max_seq_len', default=1536, type=int)
     parser.add_argument('--use_moe', default=False, type=bool)
-    parser.add_argument("--data_path", type=str, default="/root/workspace/dataset/sft_mini_512.jsonl")
-
     args = parser.parse_args()
 
-    lm_config = LMConfig(dim=args.dim, n_layers=args.n_layers, max_seq_len=args.max_seq_len, use_moe=args.use_moe)
-    args.save_dir = '/root/workspace/train_res'
+    model_config = VLMConfig(dim=args.dim, n_layers=args.n_layers, max_seq_len=args.max_seq_len)
+    max_seq_len = model_config.max_seq_len
+    # args.save_dir = os.path.join(args.out_dir)
+    args.save_dir = f'/root/workspace/train_res'
     os.makedirs(args.save_dir, exist_ok=True)
     os.makedirs(args.out_dir, exist_ok=True)
-    tokens_per_iter = args.batch_size * lm_config.max_seq_len
+    tokens_per_iter = args.batch_size * max_seq_len
     torch.manual_seed(1337)
     device_type = "cuda" if "cuda" in args.device else "cpu"
-
 
     ctx = nullcontext() if device_type == "cpu" else torch.cuda.amp.autocast()
     ddp = int(os.environ.get("RANK", -1)) != -1  # is this a ddp run?
@@ -158,9 +166,11 @@ if __name__ == "__main__":
         args.device = torch.device(DEVICE)
 
 
-    model, tokenizer = init_model(lm_config)
+    model, tokenizer, preprocess = init_model(model_config)
 
-    train_ds = SFTDataset(args.data_path, tokenizer, max_length=lm_config.max_seq_len)
+    train_ds = VLMDataset(args.data_path, args.images_path, tokenizer, preprocess=preprocess,
+                          image_special_token=model_config.image_special_token,
+                          max_length=max_seq_len)
     train_sampler = DistributedSampler(train_ds) if ddp else None
     train_loader = DataLoader(
         train_ds,
@@ -182,3 +192,4 @@ if __name__ == "__main__":
     iter_per_epoch = len(train_loader)
     for epoch in range(args.epochs):
         train_epoch(epoch)
+

@@ -132,7 +132,7 @@ def init_model(lm_config):
     tokenizer = AutoTokenizer.from_pretrained(lm_config.tokenizer_path)
     model = MiniMindLM(lm_config)
     moe_path = '_moe' if lm_config.use_moe else ''
-    ckp = f'/root/train_res/full_sft_{lm_config.dim}{moe_path}.pth'
+    ckp = f'/root/workspace/train_res/full_sft_{lm_config.dim}{moe_path}.pth'
     state_dict = torch.load(ckp, map_location=args.device)
     model.load_state_dict(state_dict, strict=False)
     # 初始化参考模型
@@ -164,7 +164,7 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="RLHF DPO")
     parser.add_argument("--out_dir", type=str, default="out")
     parser.add_argument("--epochs", type=int, default=1)
-    parser.add_argument("--batch_size", type=int, default=10)#bs=16会爆显存,bs=8占显存约17GB
+    parser.add_argument("--batch_size", type=int, default=32)#bs=16会爆显存,bs=8占显存约17GB
     parser.add_argument("--learning_rate", type=float, default=1e-8)
     parser.add_argument("--device", type=str, default="cuda:0" if torch.cuda.is_available() else "cpu")
     parser.add_argument("--dtype", type=str, default="bfloat16")
@@ -173,19 +173,19 @@ if __name__ == "__main__":
     parser.add_argument("--accumulation_steps", type=int, default=4)
     parser.add_argument("--grad_clip", type=float, default=1.0)
     parser.add_argument("--warmup_iters", type=int, default=0)
-    parser.add_argument("--log_interval", type=int, default=100)
-    parser.add_argument("--save_interval", type=int, default=100)
+    parser.add_argument("--log_interval", type=int, default=30)
+    parser.add_argument("--save_interval", type=int, default=30)
     parser.add_argument('--local_rank', type=int, default=-1)
     parser.add_argument('--dim', default=512, type=int)
     parser.add_argument('--n_layers', default=8, type=int)
     parser.add_argument('--max_seq_len', default=3000, type=int)
     parser.add_argument('--use_moe', default=False, type=bool)
-    parser.add_argument("--data_path", type=str, default="/root/dpo.jsonl")
+    parser.add_argument("--data_path", type=str, default="/root/workspace/dataset/dpo.jsonl")
 
     args = parser.parse_args()
 
     lm_config = LMConfig(dim=args.dim, n_layers=args.n_layers, max_seq_len=args.max_seq_len, use_moe=args.use_moe)
-    args.save_dir = '/root/train_res'
+    args.save_dir = '/root/workspace/train_res'
     os.makedirs(args.save_dir, exist_ok=True)
     os.makedirs(args.out_dir, exist_ok=True)
     tokens_per_iter = args.batch_size * lm_config.max_seq_len
