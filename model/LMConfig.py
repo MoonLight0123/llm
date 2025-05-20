@@ -3,7 +3,7 @@ from typing import List
 
 
 class LMConfig(PretrainedConfig):
-    model_type = "minimind"
+    model_type = "llm"
 
     def __init__(
             self,
@@ -47,7 +47,7 @@ class LMConfig(PretrainedConfig):
         self.dropout = dropout
         self.flash_attn = flash_attn
 
-        self.tokenizer_path = '/root/workspace/llm_learn_new/model/minimind_tokenizer'
+        self.tokenizer_path = '/root/workspace/llm_learn_new/model/tokenizer'
         ####################################################
         # Here are the specific configurations of MOE
         # When use_moe is false, the following is invalid

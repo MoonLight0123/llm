@@ -57,7 +57,7 @@ class VLMDataset(Dataset):
             messages.append({"role": role, "content": turn['content'].replace('<image>', self.image_token)})
         # 下面是构造的对话模板
         # <s>system
-        # 你是 MiniMind，是一个有用的人工智能助手。</s>
+        # 你是一个有用的人工智能助手。</s>
         # <s>user
         # 提供给定图像的简要描述。
         # @@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@</s>
@@ -227,7 +227,7 @@ class SFTDataset(Dataset):
         prompt = self._create_chat_prompt(sample['conversations'])
         # print(prompt)
         # <s>system
-        # 你是 MiniMind，是一个有用的人工智能助手。</s>
+        # 你是一个有用的人工智能助手。</s>
         # <s>user
         # 请用一段话描述阿里巴巴集团的企业文化。</s>
         # <s>assistant
@@ -292,7 +292,7 @@ class DPODataset(Dataset):
         )
         # print(chosen_prompt)
         # <s>system
-        # 你是 MiniMind，是一个有用的人工智能助手。</s>
+        # 你是一个有用的人工智能助手。</s>
         # <s>user
         # How many moles of HBr are required to react with 2 moles of C2H6 to form 2 moles of C2H5Br along with 2 moles of H2?</s>
         # <s>assistant
