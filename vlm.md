@@ -37,6 +37,16 @@
   </tbody>
 </table>
 
+<table>
+  <tbody>
+    <tr>
+      <td><img src="test_img\eval_multi_images\0.jpg" ></td>
+      <td><img src="test_img\eval_multi_images\1.jpg" ></td>
+      <td>这幅图像显示了一种鸟的场景：一个女人站在红绿相间的红绿相间的紫色鸟簸戴在她身上。女人站在红色的鸟簸戴在她身上，而她的翻领上的那只红鸟则站在她身后。</td>
+    </tr>
+  </tbody>
+</table>
+
 
 本项目构建了一个轻量级的视觉语言模型的技术实现，成功构建了参数量仅 26M 的超轻量级多模态对话模型，该模型通过双阶段训练（视觉预训练 + 指令微调），实现了视觉语言理解与对话的核心能力。
 
