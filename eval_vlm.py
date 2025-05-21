@@ -20,18 +20,14 @@ def count_parameters(model):
 
 
 def init_model(lm_config, device):
-    tokenizer = AutoTokenizer.from_pretrained('/root/minimind-v/model/minimind_tokenizer')
+    tokenizer = AutoTokenizer.from_pretrained('/root/workspace/llm_learn_new/model/tokenizer')
     if args.load == 0:
         moe_path = '_moe' if args.use_moe else ''
         modes = {0: 'pretrain_vlm', 1: 'sft_vlm', 2: 'sft_vlm_multi'}
-        ckp = f'/root/train_res/{modes[args.model_mode]}_{args.dim}{moe_path}.pth'
+        ckp = f'/root/workspace/train_res/{modes[args.model_mode]}_{args.dim}{moe_path}.pth'
         model = MiniMindVLM(lm_config)
         state_dict = torch.load(ckp, map_location=device)
         model.load_state_dict({k: v for k, v in state_dict.items() if 'mask' not in k}, strict=False)
-    else:
-        transformers_model_path = 'MiniMind2-V'
-        tokenizer = AutoTokenizer.from_pretrained(transformers_model_path)
-        model = AutoModelForCausalLM.from_pretrained(transformers_model_path, trust_remote_code=True)
 
     print(f'VLM参数量：{sum(p.numel() for p in model.parameters() if p.requires_grad) / 1e6:.3f} 百万')
 
@@ -61,7 +57,7 @@ if __name__ == "__main__":
     parser.add_argument('--max_seq_len', default=8192, type=int)
     parser.add_argument('--use_moe', default=False, type=bool)
     # 默认单图推理，设置为2为多图推理
-    parser.add_argument('--use_multi', default=1, type=int)
+    parser.add_argument('--use_multi', default=2, type=int)
     parser.add_argument('--stream', default=True, type=bool)
     parser.add_argument('--load', default=0, type=int, help="0: 原生torch权重，1: transformers加载")
     parser.add_argument('--model_mode', default=0, type=int,
@@ -114,7 +110,7 @@ if __name__ == "__main__":
 
     # 单图推理：每1个图像单独推理
     if args.use_multi == 1:
-        image_dir = '/root/llm_learn/test_img/eval_images'
+        image_dir = '/root/workspace/llm_learn_new/test_img/eval_images'
         prompt = f"{model.params.image_special_token}\n描述一下这个图像的内容。"
 
         for image_file in os.listdir(image_dir):
@@ -125,7 +121,7 @@ if __name__ == "__main__":
     # 2图推理：目录下的两个图像编码，一次性推理（power by ）
     if args.use_multi == 2:
         args.model_mode = 2
-        image_dir = './dataset/eval_multi_images/bird/'
+        image_dir = '/root/workspace/llm_learn_new/test_img/eval_multi_images'
         prompt = (f"{lm_config.image_special_token}\n"
                   f"{lm_config.image_special_token}\n"
                   f"比较一下两张图像的异同点。")
@@ -134,6 +130,5 @@ if __name__ == "__main__":
             image = Image.open(os.path.join(image_dir, image_file)).convert('RGB')
             pixel_tensors_multi.append(MiniMindVLM.image2tensor(image, preprocess))
         pixel_tensors = torch.cat(pixel_tensors_multi, dim=0).to(args.device).unsqueeze(0)
-        # 同样内容重复10次
         for _ in range(10):
             chat_with_vlm(prompt, pixel_tensors, (', '.join(os.listdir(image_dir))))

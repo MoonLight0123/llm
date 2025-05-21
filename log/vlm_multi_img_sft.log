@@ -1,0 +1,15 @@
+VLM可训练参数量：26.224 百万
+Epoch:[1/6](0/2480) loss:2.252236127853 lr:0.000006600000 epoch_Time:84.0min:
+VLM可训练参数量：26.224 百万
+Epoch:[1/6](0/56) loss:7.313179016113 lr:0.000006600000 epoch_Time:3.0min:
+Epoch:[1/6](50/56) loss:4.068737506866 lr:0.000006278095 epoch_Time:0.0min:
+Epoch:[2/6](0/56) loss:5.101611137390 lr:0.000006198076 epoch_Time:1.0min:
+Epoch:[2/6](50/56) loss:3.702375888824 lr:0.000005243316 epoch_Time:0.0min:
+Epoch:[3/6](0/56) loss:4.688490390778 lr:0.000005100000 epoch_Time:1.0min:
+Epoch:[3/6](50/56) loss:3.515825748444 lr:0.000003768211 epoch_Time:0.0min:
+Epoch:[4/6](0/56) loss:4.443852424622 lr:0.000003600000 epoch_Time:1.0min:
+Epoch:[4/6](50/56) loss:3.404706239700 lr:0.000002248035 epoch_Time:0.0min:
+Epoch:[5/6](0/56) loss:4.291056156158 lr:0.000002100000 epoch_Time:1.0min:
+Epoch:[5/6](50/56) loss:3.344731569290 lr:0.000001090117 epoch_Time:0.0min:
+Epoch:[6/6](0/56) loss:4.201656818390 lr:0.000001001924 epoch_Time:1.0min:
+Epoch:[6/6](50/56) loss:3.318945169449 lr:0.000000604720 epoch_Time:0.0min:

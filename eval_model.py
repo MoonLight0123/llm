@@ -12,7 +12,7 @@ warnings.filterwarnings('ignore')
 
 
 def init_model(args):
-    tokenizer = AutoTokenizer.from_pretrained('/root/llm_learn/model/minimind_tokenizer')
+    tokenizer = AutoTokenizer.from_pretrained('/root/workspace/llm_learn_new/model/tokenizer')
     if args.load == 0:
         moe_path = '_moe' if args.use_moe else ''
         modes = {0: 'pretrain', 1: 'full_sft', 2: 'rlhf', 3: 'reason'}
@@ -28,11 +28,7 @@ def init_model(args):
         state_dict = torch.load(ckp, map_location=args.device)
         model.load_state_dict({k: v for k, v in state_dict.items() if 'mask' not in k}, strict=True)
 
-    else:
-        transformers_model_path = './MiniMind2'
-        tokenizer = AutoTokenizer.from_pretrained(transformers_model_path)
-        model = AutoModelForCausalLM.from_pretrained(transformers_model_path, trust_remote_code=True)
-    print(f'MiniMind模型参数量: {sum(p.numel() for p in model.parameters() if p.requires_grad) / 1e6:.2f}M(illion)')
+    print(f'模型参数量: {sum(p.numel() for p in model.parameters() if p.requires_grad) / 1e6:.2f}M(illion)')
     return model.eval().to(args.device), tokenizer
 
 
@@ -110,7 +106,7 @@ def main():
     parser.add_argument('--use_moe', default=False, type=bool)
     parser.add_argument('--history_cnt', default=0, type=int)
     parser.add_argument('--stream', default=True, type=bool)
-    parser.add_argument('--save_dir', default='/root/train_res')
+    parser.add_argument('--save_dir', default='/root/workspace/train_res')
     parser.add_argument('--load', default=0, type=int, help="0: 原生torch权重，1: transformers加载")
     parser.add_argument('--model_mode', default=0, type=int,
                         help="0: 预训练模型，1: SFT-Chat模型，2: RLHF-Chat模型，3: Reason模型")
