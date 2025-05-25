@@ -56,7 +56,7 @@
 
 DPO 算法的损失函数可以表示为：
 
-    $$ L_DPO(θ; (x, y_w, y_l)) = -log(σ(β * (log P_θ(y_w|x) - log P_θ(y_l|x)) - (log P_ref(y_w|x) - log P_ref(y_l|x)))) $$
+$$ L_{DPO}(θ; (x, y_w, y_l)) = -log(σ(β * (log P_θ(y_w|x) - log P_θ(y_l|x)) - (log P_{ref}(y_w|x) - log P_{ref}(y_l|x)))) $$
 ### 知识蒸馏阶段
 
 知识蒸馏就是学生模型面向教师模型学习的过程，学生模型是一个较小的模型，目标是学习教师模型的行为，而不是从原始的数据中进行学习。在SFT学习中，模型的目标是拟合词Token分类硬标签（hard labels），而在知识蒸馏时，模型的目标是拟合教师模型的softmax概率分布，也即软标签(soft labels)。
