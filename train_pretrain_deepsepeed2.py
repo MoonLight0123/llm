@@ -54,18 +54,7 @@ def train_epoch(model, optimizer, train_loader, accelerator, epoch):
         loss += res.aux_loss
         accelerator.backward(loss)
         optimizer.step()
-        # loss = loss / args.accumulation_steps
 
-        # scaler.scale(loss).backward()
-
-        # if (step + 1) % args.accumulation_steps == 0:
-        #     scaler.unscale_(optimizer)
-        #     torch.nn.utils.clip_grad_norm_(model.parameters(), args.grad_clip)
-
-        #     scaler.step(optimizer)
-        #     scaler.update()
-
-        #     optimizer.zero_grad(set_to_none=True)
 
         if step % args.log_interval == 0:
             spend_time = time.time() - start_time
@@ -78,11 +67,6 @@ def train_epoch(model, optimizer, train_loader, accelerator, epoch):
                     loss.item() * args.accumulation_steps,
                     optimizer.param_groups[-1]['lr'],
                     spend_time / (step + 1) * iter_per_epoch // 60 - spend_time // 60))
-
-            # if (wandb is not None) and (not ddp or dist.get_rank() == 0):
-            #     wandb.log({"loss": loss.item() * args.accumulation_steps,
-            #                "lr": optimizer.param_groups[-1]['lr'],
-            #                "epoch_Time": spend_time / (step + 1) * iter_per_epoch // 60 - spend_time // 60})
 
         if (step + 1) % args.save_interval == 0 :
             model.eval()
@@ -105,30 +89,15 @@ def init_model(lm_config):
     return model, tokenizer
 
 
-# def init_distributed_mode():
-#     if not ddp: return
-#     global ddp_local_rank, DEVICE
-
-#     dist.init_process_group(backend="nccl")
-#     ddp_rank = int(os.environ["RANK"])
-#     ddp_local_rank = int(os.environ["LOCAL_RANK"])
-#     ddp_world_size = int(os.environ["WORLD_SIZE"])
-#     DEVICE = f"cuda:{ddp_local_rank}"
-#     torch.cuda.set_device(DEVICE)
-
-
-# torchrun --nproc_per_node 2 1-pretrain.py
+# accelerate launch --config_file ./default_config.yaml ./train_pretrain_deepsepeed2.py
 if __name__ == "__main__":
-    parser = argparse.ArgumentParser(description="MiniMind Pretraining")
+    parser = argparse.ArgumentParser(description="Pretraining")
     parser.add_argument("--out_dir", type=str, default="out")
-    # 若要以最快速度实现zero则epochs设置为1轮；否则应当利用有限的数据训练2~6个epochs。
     parser.add_argument("--epochs", type=int, default=2)
     parser.add_argument("--batch_size", type=int, default=8)
     parser.add_argument("--learning_rate", type=float, default=5e-4)
     parser.add_argument("--device", type=str, default="cuda:0" if torch.cuda.is_available() else "cpu")
     parser.add_argument("--dtype", type=str, default="bfloat16")
-    parser.add_argument("--use_wandb", action="store_true")
-    parser.add_argument("--wandb_project", type=str, default="MiniMind-Pretrain")
     parser.add_argument("--num_workers", type=int, default=1)
     parser.add_argument("--ddp", action="store_true")
     parser.add_argument("--accumulation_steps", type=int, default=2)
@@ -153,23 +122,6 @@ if __name__ == "__main__":
     tokens_per_iter = args.batch_size * lm_config.max_seq_len
     torch.manual_seed(1337)
     device_type = "cuda" if "cuda" in args.device else "cpu"
-    # args.wandb_run_name = f"MiniMind-Pretrain-Epoch-{args.epochs}-BatchSize-{args.batch_size}-LearningRate-{args.learning_rate}"
-
-    # ctx = nullcontext() if device_type == "cpu" else torch.cuda.amp.autocast()
-
-    # ddp = int(os.environ.get("RANK", -1)) != -1  # is this a ddp run?
-    # ddp_local_rank, DEVICE = 0, "cuda:0"
-
-    # if ddp:
-    #     init_distributed_mode()
-    #     args.device = torch.device(DEVICE)
-
-    # if args.use_wandb and (not ddp or ddp_local_rank == 0):
-    #     import wandb
-
-    #     wandb.init(project=args.wandb_project, name=args.wandb_run_name)
-    # else:
-    #     wandb = None
     accelerator = Accelerator()
 
     model, tokenizer = init_model(lm_config)
@@ -186,14 +138,10 @@ if __name__ == "__main__":
     )
 
 
-    # scaler = torch.cuda.amp.GradScaler(enabled=(args.dtype in ['float16', 'bfloat16']))
     optimizer = optim.AdamW(model.parameters(), lr=args.learning_rate)
 
     model, optimizer, train_loader, _ = accelerator.prepare(model, optimizer, train_loader, None)
 
-    # if ddp:
-    #     model._ddp_params_and_buffers_to_ignore = {"pos_cis"}
-    #     model = DistributedDataParallel(model, device_ids=[ddp_local_rank])
 
     iter_per_epoch = len(train_loader)
     for epoch in range(args.epochs):
